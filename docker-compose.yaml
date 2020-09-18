@@ -1,0 +1,85 @@
+version: "3"
+services:
+  mongo-master:
+    hostname: mongo-master
+    container_name: mongo-master
+    image: CI_IMAGE:__VERSION__
+    volumes:
+      - /srv/mongo/mongo-master/db:/data/db
+      - /srv/mongo/mongo-master/configdb:/data/configdb
+      - /srv/mongo/mongo-master/log:/var/log/mongodb
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - default
+    expose:
+      - 27017
+    ports:
+      - 31000:27017
+    restart: always
+    entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--replSet", "devrs" ]
+    depends_on:
+      - mongo-slave1
+      - mongo-slave2
+
+    deploy:
+     resources:
+        limits:
+           cpus: '3'
+           memory: 30G
+        reservations:
+           # cpus: '0.5'
+           memory: 2G
+  mongo-slave1:
+    hostname: mongo-slave1
+    container_name: mongo-slave1
+    image: CI_IMAGE:__VERSION__
+    volumes:
+      - /srv/mongo/mongo-slave1/db:/data/db
+      - /srv/mongo/mongo-slave1/configdb:/data/configdb
+      - /srv/mongo/mongo-slave1/log:/var/log/mongodb
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - default
+    expose:
+      - 27017
+    ports:
+      - 31001:27017
+    restart: always
+    entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--replSet", "devrs" ]
+    deploy:
+     resources:
+        limits:
+           cpus: '3'
+           memory: 30G
+        reservations:
+           # cpus: '0.5'
+           memory: 2G
+  mongo-slave2:
+    hostname: mongo-slave2
+    container_name: mongo-slave2
+    image: CI_IMAGE:__VERSION__
+    volumes:
+      - /srv/mongo/mongo-slave2/db:/data/db
+      - /srv/mongo/mongo-slave2/configdb:/data/configdb
+      - /srv/mongo/mongo-slave2/log:/var/log/mongodb
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - default
+    expose:
+      - 27017
+    ports:
+      - 31002:27017
+    restart: always
+    entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--replSet", "devrs" ]
+    deploy:
+     resources:
+        limits:
+           cpus: '3'
+           memory: 30G
+        reservations:
+           # cpus: '0.5'
+           memory: 2G 
+networks:
+  default:
+    external:
+      name: docker-compose-net

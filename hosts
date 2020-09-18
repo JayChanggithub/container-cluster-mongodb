@@ -1,0 +1,11 @@
+# This configuration is default ansible 'hosts' file.
+#
+# It must be located in /etc/ansible/hosts
+[mondb_cluster]
+<SRV_IP>
+
+[mondb_cluster:vars]
+ansible_ssh_pass='<SRV_PASS>'
+ansible_ssh_user='<SRV_USER>'
+ansible_ssh_port='22'
+

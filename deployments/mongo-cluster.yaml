@@ -1,0 +1,212 @@
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: default-view
+  
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: view
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: kube-ops
+
+---
+
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: fast
+  namespace: kube-ops
+parameters:
+  volumetype: "replicate:3"
+provisioner: kubernetes.io/glusterfs
+reclaimPolicy: Delete
+
+---
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mongo-data1
+  namespace: kube-ops
+spec:
+  storageClassName: fast
+  capacity:
+    # only suitable for production
+    storage: 500Gi
+  accessModes:
+    - ReadWriteOnce
+  glusterfs:
+    endpoints: "gluster-cluster"
+    path: "mongo-data1"
+    readOnly: false
+
+---
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mongo-data2
+  namespace: kube-ops
+spec:
+  storageClassName: fast
+  capacity:
+    # only suitable for production
+    storage: 500Gi
+  accessModes:
+    - ReadWriteOnce
+  glusterfs:
+    endpoints: "gluster-cluster"
+    path: "mongo-data2"
+    readOnly: false
+
+
+---
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mongo-data3
+  namespace: kube-ops
+spec:
+  storageClassName: fast
+  capacity:
+    # only suitable for production
+    storage: 500Gi
+  accessModes:
+    - ReadWriteOnce
+  glusterfs:
+    endpoints: "gluster-cluster"
+    path: "mongo-data3"
+    readOnly: false
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+ name: mongo
+ namespace: kube-ops
+ labels:
+   name: mongo
+spec:
+ ports:
+ - port: 27017
+   targetPort: 27017
+ clusterIP: None
+ selector:
+   role: mongo
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-expose-service
+  namespace: kube-ops
+  labels:
+    name: mongo
+spec:
+  ports:
+  - port: 27017
+    targetPort: 27017
+    nodePort: 27017
+  selector:
+    role: mongo
+  type: NodePort
+
+
+---
+
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: mongo-ingress
+  namespace: kube-ops
+spec:
+  rules:
+  - host: mongo.cloudnative.ies.inventec
+    http:
+      paths:
+      - path: /mongo-0
+        # pathType: Prefix
+        backend:
+          #hostNames:
+          #- mongo-0
+          serviceName: mongo # specified the headless service
+          servicePort: 27017
+
+---
+
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+ name: mongo
+ namespace: kube-ops
+spec:
+ serviceName: "mongo"
+ replicas: 3
+ template:
+   metadata:
+     labels:
+       role: mongo
+       environment: test
+   spec:
+     terminationGracePeriodSeconds: 10
+     containers:
+       - name: mongo
+         image: registry.ipt-gitlab:8081/ta-web/sit-db-mongo:__VERSION__
+         command:
+           - mongod
+           - "--replSet=rs0"
+           - "--dbpath=/data/db"
+           - "--port=27017"
+           - "--bind_ip_all"
+           - "--noprealloc"
+           - "--smallfiles"
+           - "--wiredTigerCacheSizeGB=0.5"
+         ports:
+           - containerPort: 27017
+         volumeMounts:
+         - name: mongo-persistent-storage
+           mountPath: /data/db
+         - name: tz-config
+           mountPath: /etc/localtime
+       - name: mongo-sidecar
+         image: registry.ipt-gitlab:8081/ta-web/sit-db-mongo/mongo-k8s-sidecar:1.0.0
+         env:
+         - name: MONGO_SIDECAR_POD_LABELS
+           value: "role=mongo,environment=test"
+         - name: KUBE_NAMESPACE
+           value: "kube-ops"
+         - name: KUBERNETES_MONGO_SERVICE_NAME
+           value: "mongo"
+
+         # only suitable for production
+         resources:
+           requests:
+             cpu: 5000m
+             memory: 30Gi
+           limits:
+             cpu: 5000m
+             memory: 30Gi
+     volumes:
+     - name: tz-config
+       hostPath:
+         path: /usr/share/zoneinfo/Asia/Shanghai
+     imagePullSecrets:
+     - name: gitlab-registry
+
+ volumeClaimTemplates:
+ - metadata:
+     name: mongo-persistent-storage
+     annotations:
+        volume.beta.kubernetes.io/storage-class: "fast"
+   spec:
+     accessModes:
+       - ReadWriteOnce
+     resources:
+       requests:
+          storage: 500Gi
