@@ -3,7 +3,7 @@
 CWD=$PWD
 passwd='BACKPW'
 back_server=10.99.104.243
-file_regex='ares_back_[0-9]+|ares_PeerRev_[0-9]+|ares_RMS_[0-9]+|ares-et_[0-9]+|ares-pa_[0-9]+'
+file_regex='ares_back_[0-9]+|ares_PeerRev_[0-9]+|ares_RMS_[0-9]+|ares-et_[0-9]+|ares-pa_[0-9]+|sms-flask_[0-9]+'
 mongo_cluster='rs0/mongo-0.mongo:27017,mongo-1.mongo:27017,mongo-2.mongo:27017'
 tm=$(date +'%Y%m%d%T' | tr -s ':' ' ' | tr -d ' ')
 __file__=$(basename $0)
@@ -13,13 +13,15 @@ db_list=(chrysaetos
          PeerRev
          RMS
          ares-et
-         ares-pa)
+         ares-pa
+         flask)
 
 name_list=(ares_back
            ares_PeerRev
            ares_RMS
            ares-et
-           ares-pa)
+           ares-pa
+           sms-flask)
 
 function dumpdata
 {
@@ -44,6 +46,9 @@ function dumpdata
             ares-pa)
                 local back_name=ares-pa
                 ;;
+            flask)
+                local back_name=sms-flask
+                ;;    
         esac
         
         if [ $(echo $dbs_exists | grep -ci "$db_name") -eq 1 ]; then
@@ -71,7 +76,6 @@ function delbefore
     done    
     cd $CWD
 }
-
 
 function main
 {

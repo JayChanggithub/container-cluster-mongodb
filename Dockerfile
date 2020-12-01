@@ -37,6 +37,8 @@ RUN chmod 777 /etc/autokey
 
 USER root
 
+RUN chown -R root:root /data && ls -al /data
+
 WORKDIR /data
 
 EXPOSE 27017
